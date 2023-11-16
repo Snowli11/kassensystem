@@ -2,20 +2,22 @@ import tkinter as tk
 from tkinter import messagebox, simpledialog
 import pandas as pd
 
-# Initialize the main application window
+# Iniziieren des Fensters
 root = tk.Tk()
-root.title('Self Checkout Register')
+root.title('Kassensystem')
 
-# Initialize global variables
+# Definieren der globalen Variablen
 total = 0.0
 items_frame = None
 checkout_list = None
 total_label = None
 
-# Load items from CSV file into a dictionary
+# Laden der Artikel
 file_path = 'artikelliste.csv'
 items_df = pd.read_csv(file_path)
-items_db = {str(row['ArtikelID']).zfill(3): {'name': row['Artikelname'], 'price': row['Preis']} for index, row in items_df.iterrows()}
+items_db = {str(row['ArtikelID']).zfill(3): {'name': row['Artikelname'], 'price': row['Preis']} for index, row in
+            items_df.iterrows()}
+
 
 def add_item_buttons():
     global items_frame
@@ -26,11 +28,14 @@ def add_item_buttons():
                            command=lambda code=item_code: on_item_button_click(code))
         button.pack(side=tk.LEFT)
 
+
 def on_item_button_click(item_code):
     global checkout_list
-    quantity = simpledialog.askinteger("Quantity", f"How many {items_db[item_code]['name']}s?", minvalue=1, maxvalue=100)
+    quantity = simpledialog.askinteger("Menge", f"Wie viele {items_db[item_code]['name']}s?", minvalue=1,
+                                       maxvalue=100)
     if quantity is not None:
         scan_item(item_code, quantity)
+
 
 def scan_item(item_code, quantity=1):
     global total, checkout_list, total_label
@@ -42,10 +47,12 @@ def scan_item(item_code, quantity=1):
     else:
         messagebox.showerror("Error", "Item not found")
 
+
 def update_total(amount):
     global total, total_label
     total += amount
     total_label.config(text=f'Total: ${total:.2f}')
+
 
 def checkout():
     global total, checkout_list, total_label
@@ -53,6 +60,7 @@ def checkout():
     checkout_list.delete(0, tk.END)
     total_label.config(text='Total: $0.00')
     total = 0
+
 
 def open_admin():
     admin_window = tk.Toplevel(root)
@@ -69,7 +77,8 @@ def open_admin():
     add_price_entry = tk.Entry(admin_window)
     add_price_entry.pack()
 
-    add_button = tk.Button(admin_window, text='Add Item', command=lambda: add_item(add_name_entry.get(), add_price_entry.get()))
+    add_button = tk.Button(admin_window, text='Add Item',
+                           command=lambda: add_item(add_name_entry.get(), add_price_entry.get()))
     add_button.pack()
 
     # Delete Item section
@@ -81,6 +90,7 @@ def open_admin():
     delete_button = tk.Button(admin_window, text='Delete Item', command=lambda: delete_item(delete_entry.get()))
     delete_button.pack()
 
+
 def add_item(name, price_entry):
     try:
         price = float(price_entry)
@@ -91,6 +101,7 @@ def add_item(name, price_entry):
         add_item_buttons()
     except ValueError:
         messagebox.showerror("Error", "Invalid price")
+
 
 def delete_item(item_code):
     global items_db
@@ -104,12 +115,14 @@ def delete_item(item_code):
     else:
         messagebox.showerror("Error", "Item not found")
 
+
 def reassign_ids():
     global items_db
     new_items_db = {}
     for new_id, code in enumerate(sorted(items_db, key=int), start=1):
         new_items_db[str(new_id).zfill(3)] = items_db[code]
     items_db = new_items_db
+
 
 def save_items_to_csv():
     new_df = pd.DataFrame.from_dict({
@@ -119,6 +132,7 @@ def save_items_to_csv():
     })
     new_df.sort_values(by='ArtikelID', inplace=True)
     new_df.to_csv(file_path, index=False)
+
 
 # GUI Layout
 checkout_list = tk.Listbox(root)
@@ -137,6 +151,5 @@ add_item_buttons()
 admin_button = tk.Button(root, text='Admin', command=open_admin)
 admin_button.pack(side=tk.BOTTOM, fill=tk.X)
 
-# Start the application
+# Starten der GUI
 root.mainloop()
-
