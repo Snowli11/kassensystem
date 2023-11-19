@@ -23,7 +23,7 @@ gesamtsumme = 0.0
 artikel_bereich = None
 kassenliste = None
 gesamtsumme_label = None
-items = []
+items = {}
 
 # Artikel aus der CSV-Datei laden
 dateipfad = 'artikelliste.csv'
@@ -64,60 +64,70 @@ def bei_artikel_button_klick(item_code):
 
 def delete_warenkorb(item_frame):
     global items
-    # Hole den Artikelcode und die Menge aus dem Frame
-    item_code = item_frame.item_code.zfill(3)
-    quantity = item_frame.quantity
+    # Hole den Artikeltext aus dem Frame
+    item_text = item_frame.item_text
 
-    # Hole die Artikeldetails aus der artikel_db
-    item = artikel_db.get(item_code)
+    # Überprüfe, ob der Artikel in der Liste ist
+    if item_text in items:
+        # Aktualisiere den Gesamtbetrag
+        item_price = float(item_text.split(' - $')[1])
+        update_gesamtsumme(-item_price)
 
-    if item:
-        # Berechne den Gesamtpreis des Artikels
-        total_price = item['price'] * quantity
+        # Reduziere die Menge des Artikels
+        items[item_text]['menge'] -= 1
 
-        # Überprüfe, ob der Artikel in der Liste ist
-        if item_frame.winfo_ismapped():
-            # Aktualisiere den Gesamtbetrag
-            update_gesamtsumme(-total_price)
+        # Entferne den Frame aus der Liste der Frames für diesen Artikel
+        items[item_text]['frames'].remove(item_frame)
 
-            # Entferne den Artikel aus der Artikel-Liste
-            item_text = item_frame.item_text  # Hole den Artikeltext aus dem Frame
-            if item_text in items:
-                items.remove(item_text)
+        # Wenn die Menge des Artikels jetzt 0 ist, entferne den Artikel aus der Artikel-Liste
+        if items[item_text]['menge'] == 0:
+            del items[item_text]
 
-    # Entferne den Frame aus der Listbox
-    item_frame.pack_forget()
+        # Andernfalls aktualisiere das Label des ersten verbleibenden Frames für diesen Artikel
+        elif items[item_text]['frames']:
+            items[item_text]['frames'][0].winfo_children()[0].config(text=f"{items[item_text]['menge']}x {item_text}")
+
+        # Entferne den Frame aus der Listbox
+        item_frame.pack_forget()
 
 def scan_item(item_code, menge=1):
     global gesamtsumme, kassenliste, gesamtsumme_label, items
     item = artikel_db.get(item_code)
     if item:
-        gesamtsumme_price = item['price'] * menge
-        item_text = f"{menge}x {item['name']} - ${gesamtsumme_price:.2f}"
+        gesamtsumme_price = item['price'] * menge  # Multipliziere den Preis mit der Menge
+        item_text = f"{item['name']} - ${item['price']:.2f}"
 
-        # Füge den Artikel zur Artikel-Liste hinzu
-        items.append(item_text)
+        # Füge den Artikel zur Artikel-Liste hinzu oder erhöhe die Menge
+        if item_text in items:
+            items[item_text]['menge'] += menge
+            # Aktualisiere das Label des ersten verbleibenden Frames für diesen Artikel
+            items[item_text]['frames'][0].winfo_children()[0].config(text=f"{items[item_text]['menge']}x {item_text} - ${items[item_text]['menge']*item['price']:.2f}")
+        else:
+            items[item_text] = {'menge': menge, 'frames': []}
 
-        # Erstelle einen neuen Frame für den Listbox-Eintrag
-        item_frame = tk.Frame(kassenliste)
-        item_frame.pack(fill=tk.X)
+            # Erstelle einen neuen Frame für den Listbox-Eintrag
+            item_frame = tk.Frame(kassenliste)
+            item_frame.pack(fill=tk.X)
 
-        # Speichere den Artikelcode, die Menge und den Artikeltext als Attribute des Frames
-        item_frame.item_code = item_code
-        item_frame.quantity = menge
-        item_frame.item_text = item_text  # Speichere den Artikeltext
+            # Speichere den Artikelcode, die Menge und den Artikeltext als Attribute des Frames
+            item_frame.item_code = item_code
+            item_frame.quantity = menge
+            item_frame.item_text = item_text  # Speichere den Artikeltext
 
-        # Erstelle das Artikel-Label und füge es zum Frame hinzu
-        item_label = tk.Label(item_frame, text=item_text)
-        item_label.pack(side=tk.LEFT)
+            # Erstelle das Artikel-Label und füge es zum Frame hinzu
+            item_label = tk.Label(item_frame, text=f"{items[item_text]['menge']}x {item_text} - ${gesamtsumme_price:.2f}")
+            item_label.pack(side=tk.LEFT)
 
-        # Erstelle den Löschen-Button und füge ihn zum Frame hinzu
-        delete_button = tk.Button(item_frame, text='X', command=lambda: delete_warenkorb(item_frame))
-        delete_button.pack(side=tk.RIGHT)
+            # Erstelle den Löschen-Button und füge ihn zum Frame hinzu
+            delete_button = tk.Button(item_frame, text='X', command=lambda: delete_warenkorb(item_frame))
+            delete_button.pack(side=tk.RIGHT)
+
+            # Füge den Frame zur Liste der Frames für diesen Artikel hinzu
+            items[item_text]['frames'].append(item_frame)
 
         update_gesamtsumme(gesamtsumme_price)
     else:
-        messagebox.showerror("Error", "Item not found")
+        messagebox.showerror("Fehler", "Artikel nicht gefunden")
 
 def update_gesamtsumme(amount):
     global gesamtsumme, gesamtsumme_label
@@ -134,13 +144,13 @@ def checkout():
         os.remove("Kassenzettel.pdf")
 
     # Erstelle eine Liste von Artikeln
-    items = []
-    for frame in kassenliste.winfo_children():
-        item_text = frame.winfo_children()[0].cget("text")  # Hole den Text des Labels aus dem Frame
-        if frame.winfo_ismapped():  # Überprüfe, ob der Artikel in der Liste ist
-            items.append(item_text)
+    items_list = []
+    for item_text, item_info in items.items():
+        item_name, item_price = item_text.rsplit(' - $', 1)
+        total_price = float(item_price) * item_info['menge']
+        items_list.append(f"{item_info['menge']}x {item_name} - ${total_price:.2f}")  # Füge die Menge und den Gesamtpreis vor dem Artikeltext hinzu
 
-    kassenzettel(items)
+    kassenzettel(items_list)
 
     # Zerstöre alle Frames in der Listbox
     for frame in kassenliste.winfo_children():
@@ -148,6 +158,7 @@ def checkout():
 
     gesamtsumme_label.config(text='Total: $0.00')
     gesamtsumme = 0
+    items = {}  # Setze die items-Datenstruktur zurück
 
     pdf_filename = "Kassenzettel.pdf"
     pdf_path = os.path.abspath(pdf_filename)
