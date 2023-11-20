@@ -23,6 +23,7 @@ gesamtsumme = 0.0
 artikel_bereich = None
 kassenliste = None
 gesamtsumme_label = None
+admin_window = None
 items = {}
 
 # Artikel aus der CSV-Datei laden
@@ -30,6 +31,7 @@ dateipfad = 'artikelliste.csv'
 artikel_df = pd.read_csv(dateipfad)
 artikel_db = {str(row['ArtikelID']).zfill(3): {'name': row['Artikelname'], 'price': row['Preis']} for index, row in
               artikel_df.iterrows()}
+
 
 def artikel_buttons_hinzufuegen():
     global artikel_bereich
@@ -62,6 +64,7 @@ def bei_artikel_button_klick(item_code):
     if menge is not None:
         scan_item(item_code, menge)
 
+
 def delete_warenkorb(item_frame):
     global items
     # Hole den Artikeltext aus dem Frame
@@ -90,6 +93,7 @@ def delete_warenkorb(item_frame):
         # Entferne den Frame aus der Listbox
         item_frame.pack_forget()
 
+
 def scan_item(item_code, menge=1):
     global gesamtsumme, kassenliste, gesamtsumme_label, items
     item = artikel_db.get(item_code)
@@ -101,7 +105,8 @@ def scan_item(item_code, menge=1):
         if item_text in items:
             items[item_text]['menge'] += menge
             # Aktualisiere das Label des ersten verbleibenden Frames für diesen Artikel
-            items[item_text]['frames'][0].winfo_children()[0].config(text=f"{items[item_text]['menge']}x {item_text} - ${items[item_text]['menge']*item['price']:.2f}")
+            items[item_text]['frames'][0].winfo_children()[0].config(
+                text=f"{items[item_text]['menge']}x {item_text} - ${items[item_text]['menge'] * item['price']:.2f}")
         else:
             items[item_text] = {'menge': menge, 'frames': []}
 
@@ -115,7 +120,8 @@ def scan_item(item_code, menge=1):
             item_frame.item_text = item_text  # Speichere den Artikeltext
 
             # Erstelle das Artikel-Label und füge es zum Frame hinzu
-            item_label = tk.Label(item_frame, text=f"{items[item_text]['menge']}x {item_text} - ${gesamtsumme_price:.2f}")
+            item_label = tk.Label(item_frame,
+                                  text=f"{items[item_text]['menge']}x {item_text} - ${gesamtsumme_price:.2f}")
             item_label.pack(side=tk.LEFT)
 
             # Erstelle den Löschen-Button und füge ihn zum Frame hinzu
@@ -128,6 +134,7 @@ def scan_item(item_code, menge=1):
         update_gesamtsumme(gesamtsumme_price)
     else:
         messagebox.showerror("Fehler", "Artikel nicht gefunden")
+
 
 def update_gesamtsumme(amount):
     global gesamtsumme, gesamtsumme_label
@@ -148,7 +155,8 @@ def checkout():
     for item_text, item_info in items.items():
         item_name, item_price = item_text.rsplit(' - $', 1)
         total_price = float(item_price) * item_info['menge']
-        items_list.append(f"{item_info['menge']}x {item_name} - ${total_price:.2f}")  # Füge die Menge und den Gesamtpreis vor dem Artikeltext hinzu
+        items_list.append(
+            f"{item_info['menge']}x {item_name} - ${total_price:.2f}")  # Füge die Menge und den Gesamtpreis vor dem Artikeltext hinzu
 
     kassenzettel(items_list)
 
@@ -198,10 +206,36 @@ def kassenzettel(kassenzettelliste):
     pdf.output("Kassenzettel.pdf")
 
 
+def psswd_test():
+    versuche = 0
+    anzahl_versuche = 3
+    korrekt_passwd = os.getenv("admin_passwort")
+    for i in range(anzahl_versuche):
+        if versuche <= anzahl_versuche:
+            psswd = simpledialog.askstring("Passwort", "Passwort eingeben", show="*")
+            if psswd == korrekt_passwd:
+                return True
+            else:
+                messagebox.showerror("Fehler", "Falsches Passwort")
+                versuche += 1
+                print(versuche)
+    if versuche >= anzahl_versuche:
+        webbrowser.open_new("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        exit()
+
+
+def admin_ja_nein():
+    if messagebox.askyesno("Admin", "Admin Panel öffnen?"):
+        return True
+    else:
+        return False
+
+
 def open_admin():
-    global delete_dropdown, selected_item_name  # Deklariere delete_dropdown und selected_item_name als global
-    admin_window = tk.Toplevel(hauptfenster)
-    admin_window.title('Admin Panel')
+    global admin_window, delete_dropdown, selected_item_name  # Deklariere delete_dropdown und selected_item_name als global
+    if admin_window is None or not tk.Toplevel.winfo_exists(admin_window):
+        admin_window = tk.Toplevel(hauptfenster)
+        admin_window.title('Admin Panel')
 
     # Artikel hinzufügen Bereich
     add_name_label = tk.Label(admin_window, text='Name')
@@ -238,6 +272,7 @@ def open_admin():
                               command=lambda: delete_item_by_name(selected_item_name.get()))
     delete_button.pack()
 
+
 def delete_item_by_name(item_name):
     # Finde den Artikelcode, der zum Artikelnamen gehört
     item_code = next((code for code, item in artikel_db.items() if item['name'] == item_name), None)
@@ -247,13 +282,16 @@ def delete_item_by_name(item_name):
     else:
         messagebox.showerror("Fehler", "Artikel nicht gefunden")
 
+
 def add_item(name, price_entry):
     global delete_dropdown, selected_item_name  # Deklariere delete_dropdown und selected_item_name als global
     try:
         price = float(price_entry)  # Versuche, den Preis in eine Gleitkommazahl umzuwandeln
-        item_code = str(max([int(code) for code in artikel_db.keys()], default=0) + 1).zfill(3)  # Generiere einen neuen Artikelcode
+        item_code = str(max([int(code) for code in artikel_db.keys()], default=0) + 1).zfill(
+            3)  # Generiere einen neuen Artikelcode
         artikel_db[item_code] = {'name': name, 'price': price}  # Füge den neuen Artikel zur artikel_db hinzu
-        messagebox.showinfo("Erfolg", f"Artikel {name} mit Preis ${price:.2f} hinzugefügt")  # Zeige eine Nachricht an, dass der Artikel erfolgreich hinzugefügt wurde
+        messagebox.showinfo("Erfolg",
+                            f"Artikel {name} mit Preis ${price:.2f} hinzugefügt")  # Zeige eine Nachricht an, dass der Artikel erfolgreich hinzugefügt wurde
         save_items_to_csv()  # Speichere die artikel_db in der CSV-Datei
         artikel_buttons_hinzufuegen()  # Aktualisiere die Artikel-Buttons
 
@@ -275,7 +313,8 @@ def delete_item(item_code):
         reassign_ids()  # Weise die IDs neu zu
         save_items_to_csv()  # Speichere die artikel_db in der CSV-Datei
         artikel_buttons_hinzufuegen()  # Aktualisiere die Artikel-Buttons
-        messagebox.showinfo("Erfolg", "Artikel gelöscht")  # Zeige eine Nachricht an, dass der Artikel erfolgreich gelöscht wurde
+        messagebox.showinfo("Erfolg",
+                            "Artikel gelöscht")  # Zeige eine Nachricht an, dass der Artikel erfolgreich gelöscht wurde
 
         # Aktualisiere das Dropdown-Menü
         item_names = [item['name'] for item in artikel_db.values()]  # Erstelle eine Liste von Artikelnamen
@@ -283,7 +322,8 @@ def delete_item(item_code):
         for item_name in item_names:  # Füge jeden Artikelnamen zum Dropdown-Menü hinzu
             delete_dropdown['menu'].add_command(label=item_name, command=tk._setit(selected_item_name, item_name))
     else:
-        messagebox.showerror("Fehler", "Artikel nicht gefunden")  # Zeige eine Fehlermeldung an, wenn der Artikel nicht gefunden wurde
+        messagebox.showerror("Fehler",
+                             "Artikel nicht gefunden")  # Zeige eine Fehlermeldung an, wenn der Artikel nicht gefunden wurde
 
 
 def reassign_ids():
@@ -305,7 +345,8 @@ def save_items_to_csv():
 
 
 # GUI-Layout
-kassenliste = tk.Listbox(hauptfenster, font=("Arial", 12), background="black", foreground="white")  # Verwende die Listbox-Klasse von tkinter
+kassenliste = tk.Listbox(hauptfenster, font=("Arial", 12), background="black",
+                         foreground="white")  # Verwende die Listbox-Klasse von tkinter
 kassenliste.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
 checkout_button = ttk.Button(hauptfenster, text='Checkout', command=checkout)  # Verwende ttk.Button
@@ -318,8 +359,9 @@ artikel_bereich = ttk.Frame(hauptfenster)  # Verwende ttk.Frame
 artikel_bereich.pack(side=tk.TOP, fill=tk.X)
 artikel_buttons_hinzufuegen()
 
-admin_button = ttk.Button(hauptfenster, text='Admin', command=open_admin)  # Verwende ttk.Button
-admin_button.pack(side=tk.BOTTOM, fill=tk.X)
+if admin_ja_nein() and psswd_test():
+    admin_button = ttk.Button(hauptfenster, text='Admin', command=open_admin)  # Verwende ttk.Button
+    admin_button.pack(side=tk.BOTTOM, fill=tk.X)
 
 # Starte die GUI
 hauptfenster.mainloop()
