@@ -7,6 +7,7 @@ import os
 import webbrowser
 import subprocess
 import platform
+import bcrypt
 
 # Initialisierung des Hauptfensters
 hauptfenster = ThemedTk(theme="black")
@@ -26,11 +27,23 @@ gesamtsumme_label = None
 admin_window = None
 items = {}
 
+hashed_pw = os.environ["admin_passwort"]
+del os.environ["admin_passwort"]
+hashed_pw = bcrypt.hashpw(hashed_pw.encode('utf-8'), bcrypt.gensalt())
+
+
 # Artikel aus der CSV-Datei laden
 dateipfad = 'artikelliste.csv'
 artikel_df = pd.read_csv(dateipfad)
 artikel_db = {str(row['ArtikelID']).zfill(3): {'name': row['Artikelname'], 'price': row['Preis']} for index, row in
               artikel_df.iterrows()}
+
+def pw_check(raw_pw):
+    global hashed_pw
+    if bcrypt.checkpw(raw_pw.encode('utf-8'), hashed_pw):
+        return True
+    else:
+        return False
 
 
 def artikel_buttons_hinzufuegen():
@@ -209,11 +222,10 @@ def kassenzettel(kassenzettelliste):
 def psswd_test():
     versuche = 0
     anzahl_versuche = 3
-    korrekt_passwd = os.getenv("admin_passwort")
     for i in range(anzahl_versuche):
         if versuche <= anzahl_versuche:
             psswd = simpledialog.askstring("Passwort", "Passwort eingeben", show="*")
-            if psswd == korrekt_passwd:
+            if pw_check(psswd):
                 return True
             else:
                 messagebox.showerror("Fehler", "Falsches Passwort")

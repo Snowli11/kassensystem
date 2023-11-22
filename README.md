@@ -15,5 +15,6 @@
 
 ### Docker implementation (Getestet auf WSL2, Windows nicht unterstützt)
 1. Stellen Sie sicher, dass Docker auf Ihrem System installiert ist
-2. Laden Sie das Projekt herunter und navigieren Sie in das Projektverzeichnis. 
-3. docker build -t test . && docker run -it -e DISPLAY=:0 -v /tmp/.X11-unix:/tmp/.X11-unix test
+2. Laden Sie das Projekt herunter und navigieren Sie in das Projektverzeichnis.
+3. Setzen Sie das Admin-Passwort im Dockerfile.
+4. docker build -t test . && docker run -it -e DISPLAY=:0 -v /tmp/.X11-unix:/tmp/.X11-unix test
