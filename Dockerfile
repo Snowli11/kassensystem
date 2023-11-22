@@ -13,8 +13,5 @@ COPY . /app
 # Install your Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Set Password
-ENV admin_passwort='mysecretpassword'
-
 # Set the command to run your application
 CMD ["python", "Kassensystem.py"]
